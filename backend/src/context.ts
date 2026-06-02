@@ -1,17 +1,10 @@
 import type { CreateExpressContextOptions } from '@trpc/server/adapters/express';
 import jwt from 'jsonwebtoken';
 import { prisma } from './db.js';
+import type { Context, UserPayload } from './context-type.js';
 
 const JWT_SECRET = process.env.JWT_SECRET || 'expenseflow_premium_secure_session_token_secret_key';
 
-export interface UserPayload {
-  id: number;
-  email: string;
-}
-
-export interface Context {
-  user: UserPayload | null;
-}
 
 export async function createContext({ req, res }: CreateExpressContextOptions): Promise<Context> {
   const authHeader = req.headers.authorization;

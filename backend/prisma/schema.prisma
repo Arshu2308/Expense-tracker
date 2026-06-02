@@ -1,0 +1,92 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model User {
+  id                Int                @id @default(autoincrement())
+  name              String
+  email             String             @unique
+  password          String
+  createdAt         DateTime           @default(now())
+  transactions      Transaction[]
+  budgets           Budget[]
+  recurringExpenses RecurringExpense[]
+  accounts          Account[]
+  savingsGoals      SavingsGoal[]
+  billReminders     BillReminder[]
+}
+
+model Account {
+  id                Int                @id @default(autoincrement())
+  name              String
+  type              String             // 'CASH', 'BANK', 'UPI', 'CREDIT_CARD'
+  userId            Int
+  user              User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  transactions      Transaction[]
+  recurringExpenses RecurringExpense[]
+  createdAt         DateTime           @default(now())
+}
+
+model Transaction {
+  id        Int      @id @default(autoincrement())
+  title     String
+  amount    Float
+  category  String
+  type      String   // 'INCOME' or 'EXPENSE'
+  tags      String[] // Postgres native string array for filters
+  accountId Int
+  account   Account  @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+  userId    Int
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Budget {
+  id       Int    @id @default(autoincrement())
+  category String
+  limit    Float
+  userId   Int
+  user     User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, category])
+}
+
+model RecurringExpense {
+  id          Int      @id @default(autoincrement())
+  title       String
+  amount      Float
+  category    String
+  type        String   @default("EXPENSE") // 'INCOME' or 'EXPENSE'
+  interval    String   // 'weekly', 'monthly', 'yearly'
+  nextDueDate DateTime
+  accountId   Int
+  account     Account  @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  userId      Int
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt   DateTime @default(now())
+}
+
+model SavingsGoal {
+  id        Int      @id @default(autoincrement())
+  name      String
+  target    Float
+  saved     Float
+  userId    Int
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+}
+
+model BillReminder {
+  id        Int      @id @default(autoincrement())
+  title     String
+  amount    Float
+  dueDate   DateTime
+  isPaid    Boolean  @default(false)
+  userId    Int
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+}

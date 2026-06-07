@@ -6,6 +6,8 @@ import type { Context, UserPayload } from './context-type.js';
 const JWT_SECRET = process.env.JWT_SECRET || 'expenseflow_premium_secure_session_token_secret_key';
 
 
+const lastProcessedCache = new Map<number, number>();
+
 export async function createContext({ req, res }: CreateExpressContextOptions): Promise<Context> {
   const authHeader = req.headers.authorization;
   if (authHeader && authHeader.startsWith('Bearer ')) {
@@ -14,7 +16,13 @@ export async function createContext({ req, res }: CreateExpressContextOptions): 
       const decoded = jwt.verify(token, JWT_SECRET) as UserPayload;
       
       // Auto-process outstanding recurring bills for this active session user
-      await processRecurringExpenses(decoded.id);
+      // Use a 5-minute in-memory cache to prevent race conditions and redundant DB queries on parallel requests
+      const now = Date.now();
+      const lastProcessed = lastProcessedCache.get(decoded.id) || 0;
+      if (now - lastProcessed > 5 * 60 * 1000) {
+        lastProcessedCache.set(decoded.id, now);
+        await processRecurringExpenses(decoded.id);
+      }
 
       return { user: decoded };
     } catch (e) {

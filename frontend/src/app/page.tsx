@@ -173,40 +173,35 @@ export default function ExpenseFlowApp() {
     if (!token) return;
     setLoadingData(true);
     try {
-      // 1. Fetch transactions
-      const txs = await trpc.transaction.getTransactions.query();
+      // Fetch all core scoped data in parallel to avoid sequential network waterfalls
+      const [txs, rawBudgets, recurrings, accs, goals, reminders, insights] = await Promise.all([
+        trpc.transaction.getTransactions.query(),
+        trpc.budget.getBudgets.query(),
+        trpc.recurring.getRecurringExpenses.query(),
+        trpc.account.getAccounts.query(),
+        trpc.goals.getSavingsGoals.query(),
+        trpc.reminders.getBillReminders.query(),
+        trpc.insights.getAIInsights.query()
+      ]);
+
       setTransactions(txs);
 
-      // 2. Fetch category budgets
-      const rawBudgets = await trpc.budget.getBudgets.query();
       const budgetMap: Record<string, number> = {};
       rawBudgets.forEach((b: { category: string; limit: number }) => {
         budgetMap[b.category] = b.limit;
       });
       setBudgets(budgetMap);
 
-      // 3. Fetch recurring templates
-      const recurrings = await trpc.recurring.getRecurringExpenses.query();
       setRecurringExpenses(recurrings);
 
-      // 4. Fetch dynamic Accounts
-      const accs = await trpc.account.getAccounts.query();
       setAccounts(accs);
       if (accs[0]) {
         setTxAccountId(accs[0].id.toString());
         setRecAccountId(accs[0].id.toString());
       }
 
-      // 5. Fetch Savings Goals
-      const goals = await trpc.goals.getSavingsGoals.query();
       setSavingsGoals(goals);
-
-      // 6. Fetch Bill Reminders
-      const reminders = await trpc.reminders.getBillReminders.query();
       setBillReminders(reminders);
-
-      // 7. Fetch Smart AI Insights
-      const insights = await trpc.insights.getAIInsights.query();
       setAiInsights(insights);
 
     } catch (err: any) {
